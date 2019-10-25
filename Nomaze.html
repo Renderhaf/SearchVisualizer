@@ -4,19 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Search Algorithm and Maze Gen</title>
+    <title>Maze</title>
 </head>
 <body align="center">
     <canvas width="500" height="500" id="myCan" style="border: 1px solid black"></canvas><br/>
-    Block Num: <input type="number" id="blocknum" value = 50 onchange="setup();draw()" style="width: 5vh;">
+    Block Num: <input type="number" id="blocknum" value = 20 onchange="setup();draw()" style="width: 5vh;">
     FPS: <input type="number" id="fps" value="60" style="width: 5vh;"><br/>
     Random Fill: <input type="checkbox" id="randomfill" checked=true>
     <input type="button" value="Search" onclick="search()">
     <input type="button" value="Reset" onclick="setup();clearInterval(inter);draw();"><br/>
-    <input type="button" value="Create Maze" onclick="startMaze()">
     <h2 id="info"></h2>
     <script>
-        // defining some vars
         var c = document.getElementById("myCan");
         var ctx = c.getContext("2d");
         var blocks;
@@ -27,9 +25,7 @@
         var currLoc;
         var end = true;
         var setupped = false;
-        var visited;
 
-        //mouse bind for drawing
         c.addEventListener("mousedown", mouseDown, false);
 
         function setup(){
@@ -39,7 +35,7 @@
             blockArr = new Array(blocks * blocks);
 
             if (document.getElementById("randomfill").checked){
-                for (let i = 0; i < blockArr.length; i++){ // random filling
+                for (let i = 0; i < blockArr.length; i++){
                     if (Math.random() < 0.7) {
                         blockArr[i] = 0;
                     } else {
@@ -60,7 +56,7 @@
             setupped = true;
         }
 
-        function draw(){ // draw the search and maze creating data to the screen
+        function draw(){
             ctx.clearRect(0,0,c.width,c.height);
             for (let i = 0; i < blockArr.length; i++){
                 let x = i % blocks;
@@ -88,22 +84,23 @@
             }
         }
 
-        function search(){ //initielizes the search algorithm
-            end = false;
+        function search(){
             let speed = 1000/parseInt(document.getElementById("fps").value);
             console.log(speed);
             inter = setInterval(randomStackSearch,speed);
+            // randomStackSearch();
 
             searchStack = [];
             currLoc = [0,0];
         }
 
 
-        function randomStackSearch(){ // periodiclly called function for searching
+        function randomStackSearch(){
             if (end) return;
             let newloc = rss_GetNewLoc();
             if (newloc == -1){
                 if (searchStack.length > 0) {
+                    // console.log(currLoc)
                     blockArr[xyToIndex(currLoc[0],currLoc[1])] = 4;
                     currLoc = searchStack.pop();
                     blockArr[xyToIndex(currLoc[0],currLoc[1])] = 2;
@@ -115,6 +112,7 @@
                 }
             } else {
                 searchStack.push(currLoc);
+                // console.log(currLoc)
 
                 if (blockArr[xyToIndex(newloc[0], newloc[1])] == 1){ //found end
                     document.getElementById("info").innerHTML = "FOUND PATH!";
@@ -134,7 +132,7 @@
             draw();
         }
 
-        function rss_GetNewLoc(){ //gets all nieghbours for searching
+        function rss_GetNewLoc(){
             //get all possible close cells
             var possibleNs = [];
             //up
@@ -153,17 +151,16 @@
             if (currLoc[0] > 0 && blockArr[xyToIndex(currLoc[0]-1,currLoc[1])] < 2){
                 possibleNs.push([currLoc[0]-1, currLoc[1]])
             }   
+            // console.log(possibleNs)
             
             if (possibleNs.length == 0){
                 return -1;
             }
-
-            //choose one randomally - currently turned off
+            //choose one randomally
             // let index = Math.floor(Math.random()*possibleNs.length);
-
-            //choose a niehbour based on distance
             let index = 0;
             let mindist = calcDist(possibleNs[0]);
+            // console.log(mindist);
             for (let i = 0; i < possibleNs.length; i++){
                 if (calcDist(possibleNs[i]) < mindist){
                     mindist = calcDist(possibleNs[i]);
@@ -174,7 +171,7 @@
             return possibleNs[index];
         }
 
-        function calcDist(loc){ //calculates the distance to the end for a location
+        function calcDist(loc){
             let dist = Math.hypot((blocks-1) - loc[0], (blocks-1) - loc[1]);
             // console.log("dist: " + dist + " x : " + loc[0] + " y : " + loc[1]);
             return dist;
@@ -184,14 +181,16 @@
             return (y * blocks)+x;
         }
 
-        function retrace() { //retracing through the stack for path finding after search
+        function retrace() {
             while (searchStack.length != 0){
                 let c = searchStack.pop();
+                // console.log(c);
                 blockArr[xyToIndex(c[0], c[1])] = 1;
             }
 
             for (let i = 0; i < blockArr.length; i++){
                 if (blockArr[i] == 4){
+                    // console.log("found");
                     blockArr[i] = 0;
                 }
             }
@@ -202,7 +201,7 @@
             c.addEventListener("mouseup", mouseUp, false);
         }
 
-        function mouseMove(e){ //mouse binded function for drawing
+        function mouseMove(e){
             if (!setupped) return;
             let x = e.x;
             let y = e.y;
@@ -221,119 +220,6 @@
         function mouseUp(){
             c.removeEventListener("mousemove", mouseMove);
             c.removeEventListener("mouseUp", mouseUp);
-        }
-
-        function startMaze(){ // init function for maze gen algorithm
-            let speed = 1;
-            console.log(speed);
-            inter = setInterval(createMaze,speed);
-
-            searchStack = [];
-            currLoc = [0,0];
-            visited = new Array(blocks*blocks);
-            visited[0] = true;
-        }
-
-        function createMaze(){ //periodically called function for maze gen
-            if (end) return;
-            let newloc = maze_GetNewLoc();
-
-            if (newloc == -1){
-                if (searchStack.length > 0) { //backtracing
-                    blockArr[xyToIndex(currLoc[0],currLoc[1])] = 4;
-                    currLoc = searchStack.pop();
-                    blockArr[xyToIndex(currLoc[0],currLoc[1])] = 2;
-                } else { //maze created
-                    document.getElementById("info").innerHTML = "Maze Created!";
-                    end = true;
-                    clearInterval(inter);
-                    finishMaze();
-                    return;
-                }
-            } else { //there is a path
-                
-                searchStack.push(currLoc);
-                
-                //walls
-                makeWalls(currLoc, newloc);
-
-                blockArr[xyToIndex(currLoc[0],currLoc[1])] = 4;
-                currLoc = newloc;
-                blockArr[xyToIndex(currLoc[0],currLoc[1])] = 2;
-
-                visited[xyToIndex(currLoc[0],currLoc[1])] = true;
-            }
-
-            
-            draw();
-        }
-
-        function maze_GetNewLoc(){ // get nieghbours for maze gen
-            //get all possible close cells
-            var possibleNs = [];
-            //up
-            if (currLoc[1] > 0 && !visited[xyToIndex(currLoc[0],currLoc[1]-1)]){
-                possibleNs.push([currLoc[0], currLoc[1]-1])
-            }
-            //down -
-            if (currLoc[1] < blocks-1 && !visited[xyToIndex(currLoc[0],currLoc[1]+1)]){
-                possibleNs.push([currLoc[0], currLoc[1]+1])
-            }
-            //right
-            if (currLoc[0] < blocks-1 && !visited[xyToIndex(currLoc[0]+1,currLoc[1])]){
-                possibleNs.push([currLoc[0]+1, currLoc[1]])
-            }
-            //left
-            if (currLoc[0] > 0 && !visited[xyToIndex(currLoc[0]-1,currLoc[1])]){
-                possibleNs.push([currLoc[0]-1, currLoc[1]])
-            }   
-            
-            if (possibleNs.length == 0){
-                return -1;
-            }
-            //choose one randomally
-            let index = Math.floor(Math.random()*possibleNs.length);
-
-            return possibleNs[index];
-        }
-
-        function makeWalls(currL, newL){ // create walls in the direction of moving for maze gen
-            let wallLocs = [];
-            if (Math.abs(newL[0] - currL[0]) != 0){ // horizontal move
-                wallLocs.push([currL[0], currL[1]+1]);
-                wallLocs.push([currL[0], currL[1]-1]);
-            } else if (Math.abs(newL[1] - currL[1]) != 0){ // vertical move
-                wallLocs.push([currL[0]+1, currL[1]]);
-                wallLocs.push([currL[0]-1, currL[1]]);
-            }
-
-            for (loc of wallLocs){ // add all Locs
-                let xbad = (loc[0] < 0 || loc[0] > blocks-1);
-                let ybad = (loc[1] < 0 || loc[1] > blocks-1);
-                let wallPlaceType = blockArr[xyToIndex(loc[0], loc[1])];
-                let generalBad = (xbad || ybad || wallPlaceType == 1);// if wall outside of screen or is end
-                if (!generalBad){ 
-                    visited[xyToIndex(loc[0], loc[1])] = true;
-                    blockArr[xyToIndex(loc[0], loc[1])] = 3;
-                }
-            }
-        }
-
-        function finishMaze(){ //finish and draw the final maze + get it ready for searching
-            for (let i = 0; i < blockArr.length; i++){
-                if (blockArr[i] == 4) {
-                    console.log("eraese");
-                    blockArr[i] = 0;
-                }
-                if (blockArr[i] == 1) { //maze did not get to end
-                    end = true;
-                    setup();
-                    startMaze();
-                }
-            }
-            
-            blockArr[blockArr.length-1] = 1;
-            draw();
         }
          
         setup();
